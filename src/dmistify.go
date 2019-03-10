@@ -175,8 +175,8 @@ func getresultfromdnsdumpster() {
 
 func getdnslookupresult(domain string) {
 	bluec := color.New(color.FgBlue, color.Bold)
-	var srcURL = fmt.Sprintf("https://api.hackertarget.com/dnslookup/?q=%s", domain)
-	body := getResponse(srcURL, "GET")
+	var baseURL = "https://api.hackertarget.com/dnslookup/"
+	body := getResponseQS(baseURL, "GET", domain, "q")
 	bluec.Println(string(body))
 }
 
@@ -189,31 +189,30 @@ func getreversednsresult(ip string) {
 
 func getportscanresult(domain string) {
 	bluec := color.New(color.FgBlue, color.Bold)
-	var srcURL = fmt.Sprintf("https://api.hackertarget.com/nmap/?q=%s", domain)
-	//fmt.Println(srcURL)
-	body := getResponse(srcURL, "GET")
+	var baseURL = "https://api.hackertarget.com/nmap/"
+	body := getResponseQS(baseURL, "GET", domain, "q")
 	bluec.Println(string(body))
 }
 
 func getwhoisresult(domain string) {
 	bluec := color.New(color.FgBlue, color.Bold)
-	var srcURL = fmt.Sprintf("https://api.hackertarget.com/whois/?q=%s", domain)
-	body := getResponse(srcURL, "GET")
+	var baseURL = "https://api.hackertarget.com/whois/"
+	body := getResponseQS(baseURL, "GET", domain, "q")
 	bluec.Println(string(body))
 }
 
 func getreverseIPlookupresult(domain string) {
 	bluec := color.New(color.FgBlue, color.Bold)
-	var srcURL = fmt.Sprintf("https://api.hackertarget.com/reverseiplookup/?q=%s", domain)
-	body := getResponse(srcURL, "GET")
+	var baseURL = "https://api.hackertarget.com/reverseiplookup/"
+	body := getResponseQS(baseURL, "GET", domain, "q")
 	bluec.Println(string(body))
 }
 
 func getWebTechresult(domain string) {
 	bluec := color.New(color.FgBlue, color.Bold)
-	var srcURL = fmt.Sprintf("https://api.wappalyzer.com/lookup-basic/beta/?url=%s", domain)
+	var baseURL = "https://api.wappalyzer.com/lookup-basic/beta/"
 	strctWebTechs := []WebTech{}
-	body := getResponse(srcURL, "GET")
+	body := getResponseQS(baseURL, "GET", domain, "url")
 	//fmt.Println(string(body))
 	json.Unmarshal(body, &strctWebTechs)
 	//fmt.Println(len(strctWebTechs))
@@ -236,6 +235,24 @@ func getResponse(srcURL, httpmethod string) []byte {
 	return bodybyte
 }
 
+func getResponseQS(baseURL string, httpmethod string, domain string, querystr string) []byte {
+	client := &http.Client{}
+	req, err := http.NewRequest(httpmethod, baseURL, nil)
+	checkerr(err)
+	qs := req.URL.Query()
+	qs.Add(querystr, domain)
+	req.URL.RawQuery = qs.Encode()
+	req.URL.RawQuery = strings.Replace(req.URL.RawQuery, "%0A", "", -1)
+
+	resp, err := client.Do(req)
+	checkerr(err)
+	defer resp.Body.Close()
+
+	bodybyte, err := ioutil.ReadAll(resp.Body)
+	checkerr(err)
+	return bodybyte
+}
+
 func getipinfofromthreatcrowd(reportype, searchval string) {
 	bluec := color.New(color.FgBlue, color.Bold)
 	crossout := color.New(color.CrossedOut, color.Bold)
@@ -243,10 +260,8 @@ func getipinfofromthreatcrowd(reportype, searchval string) {
 
 	var strctThreatCrowdIPResult ThreatCrowdIPResult
 	var strctThreatCrowdDomainResult ThreatCrowdDomainResult
-	srcURL := fmt.Sprintf("https://threatcrowd.org/searchApi/v2/%s/report/?%s=%s", reportype, reportype, searchval)
-	//fmt.Println(srcURL)
-
-	bodybyte := getResponse(srcURL, "GET")
+	baseURL := fmt.Sprintf("https://threatcrowd.org/searchApi/v2/%s/report/", reportype)
+	bodybyte := getResponseQS(baseURL, "GET", searchval, reportype)
 	//fmt.Println(string(bodybyte))
 	if strings.Compare(reportype, "domain") == 0 {
 		json.Unmarshal(bodybyte, &strctThreatCrowdDomainResult)
